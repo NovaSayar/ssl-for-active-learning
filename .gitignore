@@ -1,5 +1,4 @@
 /data
 /.venv
 /venv
-.gitignore
 # add here all the folder you want not to go on github

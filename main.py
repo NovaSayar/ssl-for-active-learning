@@ -154,9 +154,10 @@ class ActiveLearningPipeline:
         with torch.no_grad():
             for images, labels in dataloader:
                 images = images.to(self.device)
+                labels = labels.to(self.device)  # Move labels to device
                 outputs = self.model(images)
                 predictions.extend(outputs.argmax(1).cpu().numpy())
-                targets.extend(labels.numpy())
+                targets.extend(labels.cpu().numpy())  # Convert from device to CPU before numpy
         
         return accuracy_score(targets, predictions)
     
@@ -379,42 +380,159 @@ class ActiveLearningPipeline:
 
 def plot_results(all_results: Dict[str, dict], output_name: str = 'active_learning_comparison.png'):
     """
-    Visualize Active Learning results for multiple strategies
+    Visualize Active Learning results for multiple strategies with comprehensive plots
     """
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    fig = plt.figure(figsize=(20, 12))
+    gs = fig.add_gridspec(3, 3, hspace=0.3, wspace=0.3)
     
-    colors = ['blue', 'red', 'green', 'purple', 'orange']
-    markers = ['o', 's', 'D', '^', 'v']
+    colors = {'random': '#808080', 'entropy': '#e74c3c', 'least_confidence': '#3498db', 
+              'margin': '#2ecc71', 'coreset': '#9b59b6'}
+    markers = {'random': 'o', 'entropy': 's', 'least_confidence': 'D', 'margin': '^', 'coreset': 'v'}
     
-    # Plot 1: Test Accuracy vs Rounds
-    for idx, (strategy, results) in enumerate(all_results.items()):
+    # Plot 1: Test Accuracy vs Rounds (Large)
+    ax1 = fig.add_subplot(gs[0, :])
+    for strategy, results in all_results.items():
         ax1.plot(results['rounds'], results['test_acc'], 
-                marker=markers[idx % len(markers)], 
-                color=colors[idx % len(colors)],
-                label=strategy, linewidth=2, markersize=6)
+                marker=markers.get(strategy, 'o'), 
+                color=colors.get(strategy, 'blue'),
+                label=strategy.replace('_', ' ').title(), 
+                linewidth=2.5, markersize=8, alpha=0.8)
     
-    ax1.set_xlabel('Active Learning Round', fontsize=12)
-    ax1.set_ylabel('Test Accuracy', fontsize=12)
-    ax1.set_title('Test Accuracy vs AL Rounds', fontsize=14, fontweight='bold')
-    ax1.legend(fontsize=10)
-    ax1.grid(True, alpha=0.3)
+    ax1.set_xlabel('Active Learning Round', fontsize=13, fontweight='bold')
+    ax1.set_ylabel('Test Accuracy', fontsize=13, fontweight='bold')
+    ax1.set_title('Test Accuracy Evolution Across AL Rounds', fontsize=15, fontweight='bold', pad=20)
+    ax1.legend(fontsize=11, loc='lower right', framealpha=0.9)
+    ax1.grid(True, alpha=0.3, linestyle='--')
+    ax1.set_ylim([0, 1])
     
     # Plot 2: Test Accuracy vs Dataset Size
-    for idx, (strategy, results) in enumerate(all_results.items()):
+    ax2 = fig.add_subplot(gs[1, 0])
+    for strategy, results in all_results.items():
         ax2.plot(results['labeled_size'], results['test_acc'], 
-                marker=markers[idx % len(markers)], 
-                color=colors[idx % len(colors)],
-                label=strategy, linewidth=2, markersize=6)
+                marker=markers.get(strategy, 'o'), 
+                color=colors.get(strategy, 'blue'),
+                label=strategy.replace('_', ' ').title(), 
+                linewidth=2, markersize=7, alpha=0.8)
     
-    ax2.set_xlabel('Labeled Dataset Size', fontsize=12)
-    ax2.set_ylabel('Test Accuracy', fontsize=12)
-    ax2.set_title('Test Accuracy vs Labeled Data', fontsize=14, fontweight='bold')
-    ax2.legend(fontsize=10)
-    ax2.grid(True, alpha=0.3)
+    ax2.set_xlabel('Labeled Dataset Size', fontsize=11, fontweight='bold')
+    ax2.set_ylabel('Test Accuracy', fontsize=11, fontweight='bold')
+    ax2.set_title('Accuracy vs Dataset Size', fontsize=12, fontweight='bold')
+    ax2.legend(fontsize=9, loc='lower right')
+    ax2.grid(True, alpha=0.3, linestyle='--')
+    ax2.set_ylim([0, 1])
     
-    plt.tight_layout()
-    plt.savefig(output_name, dpi=150, bbox_inches='tight')
-    print(f"\n✓ Results plot saved to '{output_name}'")
+    # Plot 3: Learning Efficiency (Accuracy Gain per Round)
+    ax3 = fig.add_subplot(gs[1, 1])
+    for strategy, results in all_results.items():
+        if len(results['test_acc']) > 1:
+            gains = [results['test_acc'][i] - results['test_acc'][i-1] 
+                    for i in range(1, len(results['test_acc']))]
+            rounds = results['rounds'][1:]
+            ax3.plot(rounds, gains, 
+                    marker=markers.get(strategy, 'o'),
+                    color=colors.get(strategy, 'blue'),
+                    label=strategy.replace('_', ' ').title(),
+                    linewidth=2, markersize=6, alpha=0.8)
+    
+    ax3.axhline(y=0, color='black', linestyle='-', linewidth=0.8, alpha=0.3)
+    ax3.set_xlabel('Round', fontsize=11, fontweight='bold')
+    ax3.set_ylabel('Accuracy Gain', fontsize=11, fontweight='bold')
+    ax3.set_title('Per-Round Learning Gain', fontsize=12, fontweight='bold')
+    ax3.legend(fontsize=9)
+    ax3.grid(True, alpha=0.3, linestyle='--')
+    
+    # Plot 4: Cumulative Accuracy Gain
+    ax4 = fig.add_subplot(gs[1, 2])
+    for strategy, results in all_results.items():
+        if len(results['test_acc']) > 0:
+            cumulative_gain = [results['test_acc'][i] - results['test_acc'][0] 
+                              for i in range(len(results['test_acc']))]
+            ax4.plot(results['rounds'], cumulative_gain,
+                    marker=markers.get(strategy, 'o'),
+                    color=colors.get(strategy, 'blue'),
+                    label=strategy.replace('_', ' ').title(),
+                    linewidth=2, markersize=6, alpha=0.8)
+    
+    ax4.set_xlabel('Round', fontsize=11, fontweight='bold')
+    ax4.set_ylabel('Cumulative Gain', fontsize=11, fontweight='bold')
+    ax4.set_title('Cumulative Accuracy Improvement', fontsize=12, fontweight='bold')
+    ax4.legend(fontsize=9)
+    ax4.grid(True, alpha=0.3, linestyle='--')
+    
+    # Plot 5: Train vs Test Accuracy Gap
+    ax5 = fig.add_subplot(gs[2, 0])
+    for strategy, results in all_results.items():
+        gaps = [results['train_acc'][i] - results['test_acc'][i] 
+               for i in range(len(results['test_acc']))]
+        ax5.plot(results['rounds'], gaps,
+                marker=markers.get(strategy, 'o'),
+                color=colors.get(strategy, 'blue'),
+                label=strategy.replace('_', ' ').title(),
+                linewidth=2, markersize=6, alpha=0.8)
+    
+    ax5.set_xlabel('Round', fontsize=11, fontweight='bold')
+    ax5.set_ylabel('Train-Test Gap', fontsize=11, fontweight='bold')
+    ax5.set_title('Overfitting Analysis', fontsize=12, fontweight='bold')
+    ax5.legend(fontsize=9)
+    ax5.grid(True, alpha=0.3, linestyle='--')
+    
+    # Plot 6: Final Performance Comparison (Bar Chart)
+    ax6 = fig.add_subplot(gs[2, 1])
+    strategies_list = list(all_results.keys())
+    final_accs = [all_results[s]['test_acc'][-1] for s in strategies_list]
+    bars = ax6.bar(range(len(strategies_list)), final_accs,
+                   color=[colors.get(s, 'blue') for s in strategies_list],
+                   alpha=0.7, edgecolor='black', linewidth=1.5)
+    
+    # Add value labels on bars
+    for i, (bar, acc) in enumerate(zip(bars, final_accs)):
+        height = bar.get_height()
+        ax6.text(bar.get_x() + bar.get_width()/2., height,
+                f'{acc:.3f}',
+                ha='center', va='bottom', fontsize=10, fontweight='bold')
+    
+    ax6.set_xlabel('Strategy', fontsize=11, fontweight='bold')
+    ax6.set_ylabel('Final Test Accuracy', fontsize=11, fontweight='bold')
+    ax6.set_title('Final Performance Comparison', fontsize=12, fontweight='bold')
+    ax6.set_xticks(range(len(strategies_list)))
+    ax6.set_xticklabels([s.replace('_', '\n').title() for s in strategies_list], 
+                        fontsize=9, rotation=0)
+    ax6.set_ylim([0, 1])
+    ax6.grid(True, alpha=0.3, axis='y', linestyle='--')
+    
+    # Plot 7: Sample Efficiency (Area Under Curve)
+    ax7 = fig.add_subplot(gs[2, 2])
+    strategies_list = list(all_results.keys())
+    aucs = []
+    for s in strategies_list:
+        # Calculate AUC (average accuracy across all rounds)
+        auc = np.mean(all_results[s]['test_acc'])
+        aucs.append(auc)
+    
+    bars = ax7.bar(range(len(strategies_list)), aucs,
+                   color=[colors.get(s, 'blue') for s in strategies_list],
+                   alpha=0.7, edgecolor='black', linewidth=1.5)
+    
+    for i, (bar, auc) in enumerate(zip(bars, aucs)):
+        height = bar.get_height()
+        ax7.text(bar.get_x() + bar.get_width()/2., height,
+                f'{auc:.3f}',
+                ha='center', va='bottom', fontsize=10, fontweight='bold')
+    
+    ax7.set_xlabel('Strategy', fontsize=11, fontweight='bold')
+    ax7.set_ylabel('Average Accuracy', fontsize=11, fontweight='bold')
+    ax7.set_title('Sample Efficiency (Mean Accuracy)', fontsize=12, fontweight='bold')
+    ax7.set_xticks(range(len(strategies_list)))
+    ax7.set_xticklabels([s.replace('_', '\n').title() for s in strategies_list], 
+                        fontsize=9, rotation=0)
+    ax7.set_ylim([0, 1])
+    ax7.grid(True, alpha=0.3, axis='y', linestyle='--')
+    
+    plt.suptitle('Active Learning Strategy Comparison - CIFAR-10 Animals', 
+                fontsize=16, fontweight='bold', y=0.995)
+    
+    plt.savefig(output_name, dpi=200, bbox_inches='tight', facecolor='white')
+    print(f"\n✓ Enhanced results plot saved to '{output_name}'")
 
 def save_results_to_csv(all_results: Dict[str, dict], output_name: str = 'active_learning_results.csv'):
     """
@@ -499,12 +617,26 @@ if __name__ == "__main__":
     plot_results(all_results, f'al_comparison_{timestamp}.png')
     save_results_to_csv(all_results, f'al_results_{timestamp}.csv')
     
-    # Print summary
-    print(f"\n{'='*70}")
+    # Print detailed summary
+    print(f"\n{'='*80}")
     print("FINAL RESULTS SUMMARY")
-    print(f"{'='*70}")
+    print(f"{'='*80}")
+    print(f"{'Strategy':<20} {'Final Acc':<12} {'Avg Acc':<12} {'Improvement':<15} {'Labeled'}")
+    print(f"{'-'*80}")
+    
     for strategy, results in all_results.items():
         final_acc = results['test_acc'][-1]
+        avg_acc = np.mean(results['test_acc'])
+        improvement = final_acc - results['test_acc'][0]
         final_size = results['labeled_size'][-1]
-        print(f"{strategy.upper():20s} | Final Acc: {final_acc:.4f} | Labeled: {final_size}")
-    print(f"{'='*70}\n")
+        print(f"{strategy.upper():<20} {final_acc:<12.4f} {avg_acc:<12.4f} {improvement:<15.4f} {final_size}")
+    
+    print(f"{'='*80}")
+    
+    # Find best strategy
+    best_strategy = max(all_results.items(), key=lambda x: x[1]['test_acc'][-1])
+    best_avg_strategy = max(all_results.items(), key=lambda x: np.mean(x[1]['test_acc']))
+    
+    print(f"\n🏆 Best Final Accuracy: {best_strategy[0].upper()} ({best_strategy[1]['test_acc'][-1]:.4f})")
+    print(f"🏆 Best Average Accuracy: {best_avg_strategy[0].upper()} ({np.mean(best_avg_strategy[1]['test_acc']):.4f})")
+    print(f"{'='*80}\n")

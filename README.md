@@ -23,3 +23,5 @@ model.load_state_dict(checkpoint['state_dict'])
 # Extract the backbone for AL
 backbone = model.backbone
 # Now you can use this backbone for downstream AL tasks!
+
+# If you encounter any path issues, double-check your .gitignore settings.

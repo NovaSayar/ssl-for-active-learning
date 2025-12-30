@@ -77,7 +77,7 @@ if __name__ == "__main__":
     print("Pre-training starting... This will take 100 epochs.")
     trainer.fit(model, train_loader)
     
-    save_path = "simsiam_resnet18_backbone.pth"
+    save_path = "simsiam_resnet18_cifar10_e100.pth"
     print(f"Training finished. Attempting to save weights...")
 
     # The 'try-except' block ensures we save the weights even if 

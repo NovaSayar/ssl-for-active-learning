@@ -2,3 +2,9 @@
 /.venv
 /venv
 # add here all the folder you want not to go on github
+data/
+lightning_logs/
+__pycache__/
+*.pth
+*.ckpt
+.venv/

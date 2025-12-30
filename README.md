@@ -1,4 +1,4 @@
-**Note:** Following changes has been made to have more stable and faster coding process, since we use mobile GPUs. Also because of the reasons mentioned in the methodology.
+**Note:** Following changes has been made to have more stable and faster coding process since we use mobile GPUs, also for the reasons mentioned in the methodology.
 
 ## To ensure the SSL pre-trained weights work correctly with your Active Learning pipeline, follow these mandatory steps:
 
@@ -24,7 +24,8 @@ def get_optimized_resnet18():
 ```
 
 ### 2. Loading the Weights
-**a. Download the weights:** simsiam_resnet18_cifar10_e100.pth from the GitHub Releases tab.  
+**a. Download the weights:** You can find the `simsiam_resnet18_cifar10_e100.pth` file under the **Releases** section of this repository.  
+
 **b. Important Transforms:** You must use the following normalization values in your test/query transforms to match the SSL pre-training:
 
 ```python

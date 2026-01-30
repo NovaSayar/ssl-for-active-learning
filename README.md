@@ -1,5 +1,30 @@
 **Note:** Following changes has been made to have more stable and faster coding process since we use mobile GPUs, also for the reasons mentioned in the methodology.
 
+## Quick Start
+
+```bash
+# Install dependencies (Conda)
+conda env create -f environment.yml
+conda activate ssl_al
+
+# Run the full experiment (6 scenarios, 3 seeds each)
+python run_experiment.py
+
+# Or run in background
+nohup python -u run_experiment.py > experiment.log 2>&1 &
+tail -f experiment.log
+```
+
+Output files:
+- `results_YYYYMMDD_HHMMSS.json` - Complete data (mean + std per cycle)
+- `results_YYYYMMDD_HHMMSS.csv` - Summary table (f1_mean, f1_std, auc)
+
+```bash
+# Generate plots from results
+python plot.py results_XXXXXX.json
+# Output saved to figures/
+```
+
 ## To ensure the SSL pre-trained weights work correctly with your Active Learning pipeline, follow these mandatory steps:
 
 ### 1. Mandatory Model Architecture Changes
@@ -55,6 +80,6 @@ backbone.eval()
 ### 3. Methodology & Performance Tips
 **a. Linear Probing:** We keep the backbone frozen to evaluate the pure representation power of SSL without distortion in the low-data regime.  
 
-**b. Memory Optimization:** Use torch.float16 for the Similarity Matrix ($S_{ij}$) calculation in the Information Density strategy to prevent RAM issues with 50,000 samples.  
+**b. Memory Optimization:** Similarity vectors are computed in torch.float16 to reduce memory usage.  
 
-**c. Caching:** Pre-compute the Cosine Similarity matrix once before starting the 20 AL cycles to save ~6-8 hours of computation.
+**c. Caching:** The cosine similarity is recomputed each AL cycle on the current unlabeled pool (since the pool shrinks by 200 samples per cycle).

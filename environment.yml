@@ -102,6 +102,7 @@ dependencies:
       - requests==2.32.5
       - safetensors==0.7.0
       - scipy==1.15.3
+      - scikit-learn==1.5.0
       - seaborn==0.13.2
       - sentry-sdk==2.48.0
       - shellingham==1.5.4

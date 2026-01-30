@@ -57,7 +57,7 @@ model = SimSiam(
 )
 
 # 4. MODIFY BACKBONE FOR CIFAR-10 (3x3 kernel instead of 7x7)
-# This MUST happen AFTER SimSiam creation to actually take effect
+# This must happen AFTER SimSiam creation to actually take effect
 if hasattr(model, 'encoder'):
     model.encoder.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
     model.encoder.maxpool = nn.Identity()

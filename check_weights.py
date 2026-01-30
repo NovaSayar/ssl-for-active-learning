@@ -1,7 +1,7 @@
 import torch
 
 # Load the file
-checkpoint = torch.load("simsiam_resnet18_backbone.pth", map_location="cpu")
+checkpoint = torch.load("simsiam_resnet18_cifar10_e100.pth", map_location="cpu")
 
 # Check contents
 print(f"--- File check ---")

@@ -18,8 +18,7 @@ WD_GRID = [1e-4, 1e-5]
 # 2. MODEL
 def make_model(weights_path=None):
     net = models.resnet18(weights=None)
-    net.conv1 = nn.Conv2d(3, 64, 3, 1, 1, bias=False)
-    net.maxpool = nn.Identity()
+    # Using standard ResNet18 architecture (7x7 conv1) to match SSL pre-trained weights
     net.fc = nn.Identity()
     
     if weights_path and weights_path.exists():

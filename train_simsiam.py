@@ -37,7 +37,7 @@ backbone.fc = nn.Identity()
 # 4. SIMSIAM INITIALIZATION
 model = SimSiam(
     backbone=backbone,
-    encoder="resnet18",
+    # Removed encoder="resnet18" - it was overriding the custom backbone above
     num_classes=10,
     backbone_args={},
     max_epochs=100,

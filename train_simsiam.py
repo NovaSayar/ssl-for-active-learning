@@ -28,16 +28,11 @@ class CIFAR10WithIndex(datasets.CIFAR10):
 train_dataset = CIFAR10WithIndex(root='./data', train=True, download=True, transform=SimSiamTransform())
 train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=4, pin_memory=True)
 
-# 3. BACKBONE PREPARATION
-backbone = models.resnet18(weights=None)
-backbone.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
-backbone.maxpool = nn.Identity()
-backbone.fc = nn.Identity()
-
-# 4. SIMSIAM INITIALIZATION
+# 3. SIMSIAM INITIALIZATION
+# Let solo-learn create the model, then modify the architecture for CIFAR-10
 model = SimSiam(
-    backbone=backbone,
-    encoder="resnet18", #it was overriding the custom backbone above, (2) Added again due to the type error
+    backbone=None,
+    encoder="resnet18",
     num_classes=10,
     backbone_args={},
     max_epochs=100,
@@ -60,6 +55,15 @@ model = SimSiam(
     pred_hidden_dim=512,
     lr=0.03
 )
+
+# 4. MODIFY BACKBONE FOR CIFAR-10 (3x3 kernel instead of 7x7)
+# This MUST happen AFTER SimSiam creation to actually take effect
+if hasattr(model, 'encoder'):
+    model.encoder.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+    model.encoder.maxpool = nn.Identity()
+elif hasattr(model, 'backbone'):
+    model.backbone.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+    model.backbone.maxpool = nn.Identity()
 
 # 5. TRAINING CONFIGURATION
 trainer = pl.Trainer(

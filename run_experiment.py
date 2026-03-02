@@ -108,7 +108,7 @@ def train_eval(model, train_idx, train_data, test_loader, lr=0.01, wd=1e-4):
     opt = torch.optim.SGD(model.fc.parameters(), lr=lr, momentum=0.9, weight_decay=wd)
     
     model.train()
-    for _ in range(10):
+    for _ in range(50):
         for x, y in loader:
             opt.zero_grad()
             nn.CrossEntropyLoss()(model(x.to(DEVICE)), y.to(DEVICE)).backward()
